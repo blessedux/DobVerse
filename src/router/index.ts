@@ -1,6 +1,14 @@
 import { createRouter, createWebHistory } from 'vue-router'
 import LandingPage from '../components/LandingPage.vue'
-import MainPage from '../components/MainPage.vue'
+import TeamAdminHome from '../components/TeamAdminHome.vue'
+
+const GrantsPage = () => import('../components/GrantsPage.vue')
+const BbddReunionesPage = () => import('../components/BbddReunionesPage.vue')
+const PropuestasB2BPage = () => import('../components/PropuestasB2BPage.vue')
+const PlanComunicacionesPage = () => import('../components/PlanComunicacionesPage.vue')
+const DirectoriosPage = () => import('../components/DirectoriosPage.vue')
+const UxUiPage = () => import('../components/UxUiPage.vue')
+const TareasMayoPage = () => import('../components/TareasMayoPage.vue')
 
 const router = createRouter({
   history: createWebHistory(),
@@ -13,9 +21,16 @@ const router = createRouter({
     {
       path: '/main',
       name: 'main',
-      component: MainPage,
+      component: TeamAdminHome,
       meta: { requiresAuth: true }
-    }
+    },
+    { path: '/grants', component: GrantsPage },
+    { path: '/bbdd-reuniones', component: BbddReunionesPage },
+    { path: '/propuestas-b2b', component: PropuestasB2BPage },
+    { path: '/plan-comunicaciones', component: PlanComunicacionesPage },
+    { path: '/directorios', component: DirectoriosPage },
+    { path: '/ux-ui', component: UxUiPage },
+    { path: '/tareas-mayo', component: TareasMayoPage },
   ]
 })
 
