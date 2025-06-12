@@ -22,11 +22,11 @@ import { useRouter } from 'vue-router'
 const router = useRouter()
 const error = ref('')
 
-// Add your whitelisted addresses here (lowercase)
+// Add your whitelisted addresses here (any case)
 const WHITELIST = [
-  '0x1234abcd5678efgh9012ijkl3456mnop7890qrst', // example
+  '0x45C53082da755E8B1A0844AB5aBcc035E4a2e84D', 
   // Add more addresses as needed
-]
+].map(addr => addr.toLowerCase());
 
 const connectWallet = async () => {
   error.value = ''
@@ -35,12 +35,24 @@ const connectWallet = async () => {
     return
   }
   try {
+    // 1. Prompt wallet connection
     const accounts = await window.ethereum.request({ method: 'eth_requestAccounts' })
     if (!accounts || !accounts[0]) {
       error.value = 'No wallet address found.'
       return
     }
     const address = accounts[0].toLowerCase()
+    // 2. Prompt for signature
+    const message = 'Sign in to DobVerse'
+    const signature = await window.ethereum.request({
+      method: 'personal_sign',
+      params: [message, address],
+    })
+    if (!signature) {
+      error.value = 'Signature required to enter the app.'
+      return
+    }
+    // 3. Whitelist check
     if (WHITELIST.includes(address)) {
       router.push('/main')
     } else {
