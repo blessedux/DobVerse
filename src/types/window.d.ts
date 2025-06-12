@@ -4,4 +4,5 @@ interface Window {
     on: (eventName: string, handler: (...args: any[]) => void) => void;
     removeListener: (eventName: string, handler: (...args: any[]) => void) => void;
   };
+  Privy?: any;
 } 
