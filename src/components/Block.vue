@@ -37,7 +37,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, PropType } from 'vue'
+import { ref, PropType, onMounted, watch } from 'vue'
 import { Block, BlockType, BlockComponents, isTextBlock } from '@/utils/types'
 import BlockMenu from './BlockMenu.vue'
 import Tooltip from './elements/Tooltip.vue'
@@ -73,6 +73,8 @@ const emit = defineEmits([
   'split',
   'setBlockType',
 ])
+
+const justCreated = ref(false)
 
 function getFirstChild () {
   if (isTextBlock(props.block.type)) {
@@ -162,6 +164,23 @@ function keyDownHandler (event:KeyboardEvent) {
     if (!(menu.value && menu.value.open) && !props.readonly) {
       emit('split')
     }
+  } else if (event.key === 'Tab') {
+    event.preventDefault()
+    if (menu.value && menu.value.open) {
+      // Let menu handle TAB
+      return
+    }
+    // If block is empty, open command menu
+    if (getTextContent().trim() === '') {
+      if (menu.value && !menu.value.open) {
+        menu.value.open = true
+        menu.value.openedWithSlash = true
+      }
+      return
+    }
+    // If block is not empty, create new block below and focus it
+    emit('newBlock')
+    justCreated.value = true
   }
 }
 
@@ -513,5 +532,19 @@ defineExpose({
   moveToLastLine,
   getCaretPos,
   setCaretPos,
+})
+
+onMounted(() => {
+  // Reset justCreated on mount
+  justCreated.value = false
+})
+
+watch(justCreated, (val) => {
+  if (val && getTextContent().trim() === '') {
+    // Focused and just created, next TAB should open menu
+    // This is handled in keyDownHandler above
+    // Reset after use
+    justCreated.value = false
+  }
 })
 </script>

@@ -69,7 +69,7 @@
       </div>
       <div class="flex-1 flex flex-col items-center py-8 px-2 w-full">
         <!-- If a page is selected, show Lotion editor -->
-        <PageModal v-if="selectedPage" :icon="selectedPage.icon || 'lucide:file'" :title="selectedPage.name" @close="selectedPageId = null">
+        <PageModal v-if="selectedPage" :icon="selectedPage.icon || 'lucide:file'" :title="selectedPage.name" @close="selectedPage = null">
           <Lotion :page="selectedPage" />
         </PageModal>
         <!-- Otherwise, show card grid -->
@@ -135,41 +135,41 @@
   </div>
 
   <!-- Card Modal with Lotion Editor -->
-  <div v-if="isModalOpen && selectedPage" class="fixed inset-0 z-50 flex items-center justify-center bg-black/60">
-    <div class="bg-neutral-900 rounded-xl shadow-2xl p-8 w-full max-w-2xl mx-auto relative flex flex-col items-center">
-      <button @click="closeCardModal" class="absolute top-4 right-4 text-neutral-400 hover:text-white">
-        <span class="sr-only">Close</span>
-        <ChevronLeft class="w-6 h-6" />
-      </button>
-      <div class="flex items-center gap-4 mb-4 w-full">
-        <VPopover placement="bottom" :triggers="['click']" :auto-hide="true" :distance="8">
-          <template #default>
-            <Icon :icon="selectedPage.icon || 'lucide:file'" class="w-12 h-12 text-blue-400 cursor-pointer hover:text-blue-600" @click.stop="openIconPicker(selectedPage)" />
-          </template>
-          <template #popper>
-            <IconPicker :icons="previewIcons" @select="icon => selectIcon(selectedPage, icon)" />
-          </template>
-        </VPopover>
-        <h2 class="text-2xl font-bold text-white">{{ selectedPage.name }}</h2>
+  <transition name="modal-fade-scale">
+    <div v-if="isModalOpen && selectedPage" class="fixed inset-0 z-50 flex items-center justify-center bg-black/60" @mousedown.self="closeCardModal">
+      <div class="bg-neutral-900 rounded-xl shadow-2xl p-8 w-full max-w-2xl mx-auto relative flex flex-col items-center">
+        <button @click="closeCardModal" class="absolute top-4 right-4 text-neutral-400 hover:text-white text-2xl">
+          <span class="sr-only">Close</span>
+          &times;
+        </button>
+        <div class="flex items-center gap-4 mb-4 w-full">
+          <VPopover placement="bottom" :triggers="['click']" :auto-hide="true" :distance="8">
+            <template #default>
+              <Icon :icon="selectedPage?.icon || 'lucide:file'" class="w-12 h-12 text-blue-400 cursor-pointer hover:text-blue-600" @click.stop="selectedPage && openIconPicker(selectedPage)" />
+            </template>
+            <template #popper>
+              <IconPicker :icons="previewIcons" @select="icon => selectedPage && selectIcon(selectedPage, icon)" />
+            </template>
+          </VPopover>
+          <h2 class="text-2xl font-bold text-white">{{ selectedPage?.name }}</h2>
+        </div>
+        <div class="w-full max-w-full" v-if="selectedPage">
+          <Lotion :page="selectedPage" />
+        </div>
+        <button v-if="selectedPage" @click="addBlockToPage(selectedPage)" class="mt-6 bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded shadow transition">+ Add Block</button>
       </div>
-      <div class="w-full max-w-full">
-        <Lotion :page="selectedPage" />
-      </div>
-      <button @click="addBlockToPage(selectedPage)" class="mt-6 bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded shadow transition">+ Add Block</button>
     </div>
-  </div>
+  </transition>
 </template>
 
 <script setup lang="ts">
 import { ref, computed } from 'vue'
 import { v4 as uuidv4 } from 'uuid'
 import { Icon } from '@iconify/vue'
-import { Lotion } from '@dashibase/lotion'
 import VPopover from 'floating-vue'
 import 'floating-vue/dist/style.css'
 import { useRouter } from 'vue-router'
 import { MoreHorizontal, ChevronLeft } from 'lucide-vue-next'
-import { Button } from './ui/button'
 import { Container, Draggable } from 'vue3-smooth-dnd'
 import type { DropResult } from 'vue3-smooth-dnd'
 import BGPattern from './BGPattern.vue'
@@ -265,6 +265,7 @@ function addPage() {
   openPage(newPage)
 }
 function openIconPicker(page: { id: string; name: string; icon?: string; blocks: any[] }) {
+  if (!page) return
   iconPickerOpen.value = page.id
   iconPickerTarget.value = page
 }
@@ -274,6 +275,7 @@ function selectIcon(page: { id: string; name: string; icon?: string; blocks: any
   iconPickerTarget.value = null
 }
 function addBlockToPage(page: { id: string; name: string; icon?: string; blocks: any[] }) {
+  if (!page) return
   page.blocks.push({ id: uuidv4(), type: 'TEXT', details: { value: 'New block.' } })
 }
 import { VueDraggableNext as draggable } from 'vue-draggable-next'
@@ -301,7 +303,7 @@ const patternOptions = [
   { label: 'Vertical Lines', value: 'vertical-lines', icon: 'lucide:line' },
   { label: 'Checkerboard', value: 'checkerboard', icon: 'lucide:square' },
 ]
-const optionsPopoverOpen = ref<string|null>(null)
+const optionsPopoverOpen = ref<string | null>(null)
 function openOptionsPopover(cardId: string) {
   optionsPopoverOpen.value = cardId
 }
@@ -407,5 +409,17 @@ document.addEventListener('keydown', (event:KeyboardEvent) => {
 
 .drag-handle:hover {
   @apply bg-blue-100;
+}
+
+.modal-fade-scale-enter-active, .modal-fade-scale-leave-active {
+  transition: opacity 0.25s cubic-bezier(0.4,0,0.2,1), transform 0.25s cubic-bezier(0.4,0,0.2,1);
+}
+.modal-fade-scale-enter-from, .modal-fade-scale-leave-to {
+  opacity: 0;
+  transform: scale(0.96);
+}
+.modal-fade-scale-enter-to, .modal-fade-scale-leave-from {
+  opacity: 1;
+  transform: scale(1);
 }
 </style> 
