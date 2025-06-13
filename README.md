@@ -24,40 +24,83 @@ It integrates with **DOB Protocol's infrastructure** and provides a customizable
 - 🔌 Custom block registration (build your own!)
 - 🔒 Read-only view mode
 - 🧩 DOB-ready UI for token-gated access, proposals, and agent execution docs _(coming soon)_
+- 🔒 Wallet-based authentication (MetaMask or any EIP-1193 wallet)
+- 🧩 Team dashboard with Notion/Lotion-style UI
 
 ---
 
-## 🛠 Getting Started
+## 🛠 Running in a Private Cloud Server
 
-1. **Install the package**
+### 1. **Clone the Repository**
 
 ```bash
-npm i @dobprotocol/dobverse
+git clone https://github.com/blessedux/DobVerse.git
+cd DobVerse
 ```
 
-2. **Basic DOBVERSE editor**
+### 2. **Install Dependencies**
 
-```javascript
-<template>
-  <Dobverse :page="page" />
-</template>
-<script setup lang="ts">
-import { ref } from 'vue'
-import { v4 as uuidv4 } from 'uuid'
-import { Dobverse } from '@dobprotocol/dobverse'
-
-const page = ref({
-  name: '🌐 DOBVERSE',
-  blocks:[{
-    id: uuidv4(),
-    type: 'TEXT',
-    details: {
-      value: 'Welcome to DOBVERSE!'
-    },
-  }],
-})
-</script>
+```bash
+npm install
 ```
+
+### 3. **Configure Environment Variables**
+
+Create a `.env` file in the root directory:
+
+```env
+# No backend secrets needed for UI-only mode
+# If you want to restrict access, set your whitelisted wallet addresses in src/components/LandingPage.vue
+```
+
+### 4. **Build and Run the App**
+
+#### For development:
+
+```bash
+npm run dev
+```
+
+- The app will be available at `http://localhost:5173`
+
+#### For production:
+
+```bash
+npm run build
+npm run preview
+```
+
+- Or serve the `dist/` directory with any static file server (e.g. Nginx, Caddy, serve).
+
+### 5. **Deploy to Your Private Cloud**
+
+- **Docker:** You can use a simple Dockerfile to containerize the app.
+- **Nginx/Apache:** Serve the `dist/` directory as static files.
+- **Cloud Providers:** Deploy to AWS EC2, DigitalOcean, GCP, Azure, or any VPS.
+
+#### Example Dockerfile
+
+```dockerfile
+FROM node:18-alpine AS build
+WORKDIR /app
+COPY . .
+RUN npm install && npm run build
+
+FROM nginx:alpine
+COPY --from=build /app/dist /usr/share/nginx/html
+EXPOSE 80
+CMD ["nginx", "-g", "daemon off;"]
+```
+
+---
+
+## 🔐 Wallet Authentication
+
+- The app uses MetaMask (or any EIP-1193 compatible wallet) for authentication.
+- Only addresses in the whitelist (see `src/components/LandingPage.vue`) can access the dashboard.
+- On login, users must sign a message to prove wallet ownership.
+
+---
 
 ## 🤝 Contributing
 
@@ -72,4 +115,3 @@ DOBVERSE is open-source software licensed under the MIT license.
 - [Lotion](https://github.com/dashibase/lotion) - The original Notion-style editor
 - [Vue 3](https://vuejs.org/)
 - [Tailwind CSS](https://tailwindcss.com/)
-- [Privy](https://privy.io/) - For wallet integration
