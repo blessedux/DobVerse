@@ -1,0 +1,68 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  body {
+    @apply bg-neutral-900 text-white;
+  }
+
+  a {
+    @apply text-white no-underline;
+  }
+
+  a:visited {
+    @apply text-white;
+  }
+}
+
+@layer components {
+  .lotion {
+    @apply text-white;
+  }
+
+  .lotion h1 {
+    @apply text-white text-3xl font-bold mb-4;
+  }
+
+  .lotion .block {
+    @apply bg-neutral-800 rounded-lg p-4 mb-4 text-white;
+  }
+
+  .lotion .block:hover {
+    @apply bg-neutral-700;
+  }
+
+  /* Command menu styles */
+  .lotion .block-menu {
+    @apply bg-neutral-800/95 backdrop-blur-md border border-neutral-700/50 shadow-lg rounded-lg p-2;
+  }
+
+  .lotion .block-menu-item {
+    @apply text-white px-4 py-2 rounded-md transition-all duration-200;
+  }
+
+  .lotion .block-menu-item:hover {
+    @apply bg-neutral-700/50;
+  }
+
+  /* Command menu search */
+  .lotion .block-menu-search {
+    @apply text-neutral-400 border-b border-neutral-700/50 px-4 py-2 mb-2;
+  }
+
+  /* Command menu section headers */
+  .lotion .block-menu .section-header {
+    @apply text-neutral-400 text-xs font-semibold uppercase tracking-wider px-4 py-2;
+  }
+
+  /* Ensure all text in blocks is white */
+  .lotion * {
+    @apply text-white;
+  }
+
+  /* Style for active router links */
+  .router-link-active {
+    @apply bg-neutral-700 text-white;
+  }
+} 

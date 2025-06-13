@@ -1,6 +1,7 @@
 import { createRouter, createWebHistory } from 'vue-router'
 import LandingPage from '../components/LandingPage.vue'
 import TeamAdminHome from '../components/TeamAdminHome.vue'
+import { useWhitelist } from '../composables/useWhitelist'
 
 const GrantsPage = () => import('../components/GrantsPage.vue')
 const BbddReunionesPage = () => import('../components/BbddReunionesPage.vue')
@@ -11,7 +12,7 @@ const UxUiPage = () => import('../components/UxUiPage.vue')
 const TareasMayoPage = () => import('../components/TareasMayoPage.vue')
 
 const router = createRouter({
-  history: createWebHistory(),
+  history: createWebHistory(import.meta.env.BASE_URL),
   routes: [
     {
       path: '/',
@@ -31,6 +32,36 @@ const router = createRouter({
     { path: '/directorios', component: DirectoriosPage },
     { path: '/ux-ui', component: UxUiPage },
     { path: '/tareas-mayo', component: TareasMayoPage },
+    {
+      path: '/meeting-notes',
+      name: 'meeting-notes',
+      component: () => import('@/views/MeetingNotes.vue'),
+      meta: { requiresAuth: true }
+    },
+    {
+      path: '/resources',
+      name: 'resources',
+      component: () => import('@/views/Resources.vue'),
+      meta: { requiresAuth: true }
+    },
+    {
+      path: '/people',
+      name: 'people',
+      component: () => import('@/views/People.vue'),
+      meta: { requiresAuth: true }
+    },
+    {
+      path: '/tasks',
+      name: 'tasks',
+      component: () => import('@/views/Tasks.vue'),
+      meta: { requiresAuth: true }
+    },
+    {
+      path: '/archive',
+      name: 'archive',
+      component: () => import('@/views/Archive.vue'),
+      meta: { requiresAuth: true }
+    }
   ]
 })
 
@@ -46,9 +77,20 @@ router.beforeEach(async (to, from, next) => {
       if (!isWalletConnected) {
         // Redirect to home if trying to access protected route without being connected
         next({ name: 'home' })
-      } else {
-        next()
+        return
       }
+
+      // Check if the connected address is whitelisted
+      const { isAddressWhitelisted } = useWhitelist()
+      const address = accounts[0].toLowerCase()
+      
+      if (!isAddressWhitelisted(address)) {
+        // Redirect to home if address is not whitelisted
+        next({ name: 'home' })
+        return
+      }
+
+      next()
     } catch (error) {
       // If there's an error, assume not connected
       next({ name: 'home' })

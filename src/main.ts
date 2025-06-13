@@ -6,6 +6,9 @@ import router from './router'
 // Import MDI icons
 import '@mdi/font/css/materialdesignicons.css'
 
+// Import main CSS
+import './assets/main.css'
+
 const app = createApp(App)
 
 app.use(createPinia())
