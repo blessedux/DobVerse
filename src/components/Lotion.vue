@@ -1,5 +1,5 @@
 <template>
-  <div class="lotion w-[65ch] mx-auto my-24 font-sans text-base" v-if="props.page" ref="editor">
+  <div class="lotion w-full max-w-2xl min-h-[400px] mx-auto my-12 font-sans text-base overflow-y-auto" v-if="props.page" ref="editor">
     <h1 id="title" ref="title" :contenteditable="!props.readonly" spellcheck="false" data-ph="Untitled"
       @keydown.enter.prevent="splitTitle"
       @keydown.down="blockElements[0]?.moveToFirstLine(); scrollIntoView();"
