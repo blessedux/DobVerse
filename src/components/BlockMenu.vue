@@ -9,7 +9,9 @@
     </div>
     <div v-show="open" class="block-menu">
       <div ref="menu"
-        class="w-[10rem] lg:w-[12rem] xl:w-[16rem] absolute z-10 shadow-block rounded py-1 text-neutral-700 text-sm right-full bg-white max-h-[24rem] overflow-auto focus-visible:outline-none top-0">
+        class="w-[10rem] lg:w-[12rem] xl:w-[16rem] absolute z-10 shadow-block rounded py-1 text-neutral-700 text-sm right-full bg-white max-h-[24rem] overflow-auto focus-visible:outline-none top-0"
+        tabindex="0"
+        @keydown="handleKeyDown">
         <div class="text-left divide-y">
           <!-- Search term -->
           <div v-if="searchTerm" class="block-menu-search px-2 py-2 flex gap-2 w-full">
@@ -21,7 +23,8 @@
           <!-- Turn into another block like Text, Heading or Divider -->
           <div class="px-2 py-2" v-if="options.filter(option => option.type === 'Turn into').length">
             <div class="px-2 pb-2 font-semibold uppercase text-xs text-neutral-400">Turn into</div>
-            <div v-for="option, i in options.filter(option => option.type === 'Turn into')"
+            <div v-for="(option, i) in options.filter(option => option.type === 'Turn into')"
+              :key="option.label"
               class="px-2 py-1 rounded flex items-center gap-2"
               :class="[active === (i + options.filter(option => option.type !== 'Turn into').length) ? 'bg-neutral-100' : '']"
               @click.stop="setBlockType(option.blockType);"
@@ -41,7 +44,7 @@
 <script setup lang="ts">
 import { ref, computed, watch, PropType } from 'vue'
 import Fuse from 'fuse.js'
-import { BlockType, availableBlockTypes } from '@/utils/types'
+import { BlockType, availableBlockTypes } from '../utils/types'
 import Tooltip from './elements/Tooltip.vue'
 
 const props = defineProps({
@@ -64,6 +67,13 @@ const menu = ref<HTMLDivElement|null>(null)
 watch(open, isOpen => {
   if (!isOpen) {
     openedWithSlash = false
+    searchTerm.value = ''
+    active.value = 0
+  } else {
+    // Focus the menu when opened
+    setTimeout(() => {
+      menu.value?.focus()
+    }, 0)
   }
 })
 
@@ -83,9 +93,11 @@ Support keyboard navigation
 const active = ref(0)
 const searchTerm = ref('')
 
-document.addEventListener('keydown', (event:KeyboardEvent) => {
+function handleKeyDown(event: KeyboardEvent) {
   if (!open.value) return
+  
   if (['ArrowUp', 'ArrowDown'].includes(event.key)) {
+    event.preventDefault()
     // Support up/down navigation with keyboard
     if (event.key === 'ArrowUp') {
       // Move up
@@ -102,12 +114,20 @@ document.addEventListener('keydown', (event:KeyboardEvent) => {
   } else if (event.key === 'Enter') {
     // Enter selects menu option
     event.preventDefault()
-    setBlockType(options.value[active.value].blockType)
+    event.stopPropagation()
+    if (options.value.length > 0) {
+      setBlockType(options.value[active.value].blockType)
+    }
+  } else if (event.key === 'Tab') {
+    // TAB selects the closest match (first item in the filtered list)
+    event.preventDefault()
+    if (options.value.length > 0) {
+      active.value = 0
+    }
   } else if (event.key === 'Escape') {
     // Escape closes menu
+    event.preventDefault()
     open.value = false
-    searchTerm.value = ''
-    active.value = 0
   } else if (event.key.match(/^([a-zA-Z]|[0-9]| )$/)) {
     // Alphanumeric searches menu
     searchTerm.value += event.key
@@ -118,16 +138,7 @@ document.addEventListener('keydown', (event:KeyboardEvent) => {
     else searchTerm.value = searchTerm.value.slice(0, -1)
     active.value = 0
   }
-})
-
-document.addEventListener('keyup', (event:KeyboardEvent) => {
-  if (!open.value) return
-  if (event.key === 'Enter') {
-    // Enter selects menu option
-    event.preventDefault()
-    event.stopPropagation()
-  }
-})
+}
 
 /*
 Menu options
@@ -144,8 +155,6 @@ const options = computed(() => {
   if (props.blockTypes) return options.filter(option => props.blockTypes?.includes(option.blockType))
   else return options
 })
-
-
 
 function setBlockType (blockType:BlockType|string) {
   emit('setBlockType', blockType, searchTerm.value.length, openedWithSlash)

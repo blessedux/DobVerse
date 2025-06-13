@@ -25,17 +25,36 @@
         />
       </div>
       <nav class="flex-1 overflow-y-auto mt-2 px-2" v-if="sidebarOpen">
-        <div v-for="folder in sidebarFolders" :key="folder.id">
+        <div v-for="folder in folders" :key="folder.id">
           <div class="flex items-center cursor-pointer py-1 px-2 hover:bg-neutral-700 rounded" @click="toggleFolder(folder.id)">
             <Icon :icon="isOpen(folder.id) ? 'lucide:chevron-down' : 'lucide:chevron-right'" color="white" width="18" class="mr-1" />
             <Icon icon="lucide:folder" color="white" width="18" class="mr-2" />
-            <span class="font-semibold">{{ folder.name }}</span>
+            <span class="font-semibold">{{ folder.title }}</span>
           </div>
           <div v-if="isOpen(folder.id)" class="ml-5 border-l border-neutral-700 pl-2">
-            <div v-for="file in folder.children" :key="file.id" class="flex items-center py-1 px-2 hover:bg-neutral-700 rounded cursor-pointer" @click="openPage(file.id)">
-              <Icon :icon="file.icon || 'lucide:file'" color="white" width="16" class="mr-2" />
-              <span class="truncate">{{ file.name }}</span>
-            </div>
+            <Container
+              orientation="vertical"
+              behaviour="move"
+              drag-class="dragging"
+              @drop="(result) => onFolderDrop(result, folder.id)"
+            >
+              <Draggable v-for="file in folder.children" :key="file.id">
+                <div 
+                  class="flex items-center py-1 px-2 hover:bg-neutral-700 rounded cursor-pointer" 
+                  @click="openPage(file)"
+                >
+                  <VPopover placement="bottom" :triggers="['click']" :auto-hide="true" :distance="8">
+                    <template #default>
+                      <Icon :icon="file.icon || 'lucide:file'" color="white" width="18" class="mr-2 cursor-pointer group-hover:text-blue-400" @click.stop="openIconPicker(file)" />
+                    </template>
+                    <template #popper>
+                      <IconPicker :icons="previewIcons" @select="icon => selectIcon(file, icon)" />
+                    </template>
+                  </VPopover>
+                  <span class="truncate">{{ file.name }}</span>
+                </div>
+              </Draggable>
+            </Container>
           </div>
         </div>
       </nav>
@@ -55,17 +74,49 @@
         </PageModal>
         <!-- Otherwise, show card grid -->
         <div v-else class="w-full max-w-5xl">
+          <div class="flex justify-between items-center mb-4">
+            <h2 class="text-xl font-bold text-white">Pages</h2>
+            <button @click="addPage" class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded shadow transition">+ New Page</button>
+          </div>
           <div class="relative">
-            <BGPattern variant="grid" fill="#252525" :size="24" />
-            <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 relative">
-              <div v-for="card in mockupCards" :key="card.id" class="bg-neutral-800 border border-neutral-700 rounded-2xl shadow-lg p-6 flex flex-col gap-2 hover:shadow-2xl transition group relative cursor-pointer">
-                <div class="flex items-center gap-3 mb-2">
-                  <span class="text-2xl">
-                    <Icon :icon="card.icon" color="white" width="28" height="28" />
-                  </span>
-                  <span class="text-white text-xl font-semibold flex-1 truncate">{{ card.name }}</span>
-                </div>
-                <div class="text-neutral-300 text-sm truncate whitespace-pre-line">{{ card.description }}</div>
+            <BGPattern variant="dots" fill="#252525" :size="24" />
+            <div class="p-6">
+              <div class="w-full">
+                <draggable
+                  v-model="pages"
+                  :item-key="'id'"
+                  class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4 w-full max-w-6xl mx-auto"
+                  :animation="200"
+                  :ghost-class="'dragging'"
+                  :chosen-class="'dragging'"
+                  :drag-class="'dragging'"
+                  @end="onGridDragEnd"
+                >
+                  <template #item="{ element: page }">
+                    <div
+                      class="card bg-black text-white border border-blue-200 shadow-md rounded-lg flex flex-col cursor-pointer hover:shadow-lg transition-all duration-200 items-stretch justify-stretch"
+                      style="width: 100%; height: 180px; min-width: 0; min-height: 180px; margin: 0; padding: 0;"
+                      @click="openPage(page)"
+                    >
+                      <div class="flex items-center gap-2 mb-2">
+                        <VPopover placement="bottom" :triggers="['click']" :auto-hide="true" :distance="8">
+                          <template #default>
+                            <Icon :icon="page.icon || 'lucide:file'" class="w-5 h-5 text-blue-400 cursor-pointer hover:text-blue-600" @click.stop="openIconPicker(page)" />
+                          </template>
+                          <template #popper>
+                            <IconPicker :icons="previewIcons" @select="icon => selectIcon(page, icon)" />
+                          </template>
+                        </VPopover>
+                        <span class="text-sm font-medium">{{ page.name }}</span>
+                      </div>
+                      <div class="flex-1 overflow-hidden">
+                        <p class="text-sm text-neutral-400 line-clamp-3">
+                          {{ page.blocks[0]?.details.value }}
+                        </p>
+                      </div>
+                    </div>
+                  </template>
+                </draggable>
               </div>
             </div>
           </div>
@@ -82,106 +133,151 @@
       </VPopover>
     </div>
   </div>
+
+  <!-- Card Modal with Lotion Editor -->
+  <div v-if="isModalOpen && selectedPage" class="fixed inset-0 z-50 flex items-center justify-center bg-black/60">
+    <div class="bg-neutral-900 rounded-xl shadow-2xl p-8 w-full max-w-2xl mx-auto relative flex flex-col items-center">
+      <button @click="closeCardModal" class="absolute top-4 right-4 text-neutral-400 hover:text-white">
+        <span class="sr-only">Close</span>
+        <ChevronLeft class="w-6 h-6" />
+      </button>
+      <div class="flex items-center gap-4 mb-4 w-full">
+        <VPopover placement="bottom" :triggers="['click']" :auto-hide="true" :distance="8">
+          <template #default>
+            <Icon :icon="selectedPage.icon || 'lucide:file'" class="w-12 h-12 text-blue-400 cursor-pointer hover:text-blue-600" @click.stop="openIconPicker(selectedPage)" />
+          </template>
+          <template #popper>
+            <IconPicker :icons="previewIcons" @select="icon => selectIcon(selectedPage, icon)" />
+          </template>
+        </VPopover>
+        <h2 class="text-2xl font-bold text-white">{{ selectedPage.name }}</h2>
+      </div>
+      <div class="w-full max-w-full">
+        <Lotion :page="selectedPage" />
+      </div>
+      <button @click="addBlockToPage(selectedPage)" class="mt-6 bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded shadow transition">+ Add Block</button>
+    </div>
+  </div>
 </template>
 
 <script setup lang="ts">
 import { ref, computed } from 'vue'
 import { v4 as uuidv4 } from 'uuid'
 import { Icon } from '@iconify/vue'
-import FileTree from './FileTree.vue'
-import Lotion from './Lotion.vue'
-import IconPicker from './IconPicker.vue'
+import { Lotion } from '@dashibase/lotion'
 import VPopover from 'floating-vue'
 import 'floating-vue/dist/style.css'
-import PageModal from './PageModal.vue'
-import { VueDraggableNext as draggable } from 'vue-draggable-next'
 import { useRouter } from 'vue-router'
+import { MoreHorizontal, ChevronLeft } from 'lucide-vue-next'
+import { Button } from './ui/button'
+import { Container, Draggable } from 'vue3-smooth-dnd'
+import type { DropResult } from 'vue3-smooth-dnd'
+import BGPattern from './BGPattern.vue'
+import PageModal from './PageModal.vue'
+import IconPicker from './IconPicker.vue'
 import { useWalletConnect } from '../composables/useWalletConnect'
 import SkeletonLoader from 'vue3-skeleton-loader'
-import BGPattern from './BGPattern.vue'
-import { ref as vueRef } from 'vue'
 
-// --- Data Model: Each page has its own Lotion block data ---
-const defaultBlocks = () => ([
-  { id: uuidv4(), type: 'TEXT', details: { value: '' } }
-])
-
+// --- Lotion-style Pages Data ---
 const pages = ref([
-  { id: uuidv4(), icon: 'lucide:users', name: 'My Team', blocks: [ { id: uuidv4(), type: 'TEXT', details: { value: '👥 Team\nJasper\nMegan\nCharles' } } ], pinned: true },
-  { id: uuidv4(), icon: 'lucide:party-popper', name: 'Fechas Limites Grants', blocks: [ { id: uuidv4(), type: 'TEXT', details: { value: 'Deadlines and grant info' } } ], pinned: true },
-  { id: uuidv4(), icon: 'lucide:database', name: 'BBDD reuniones estrategicas', blocks: [ { id: uuidv4(), type: 'TEXT', details: { value: 'Strategic meetings database' } } ], pinned: true },
-  { id: uuidv4(), icon: 'lucide:handshake', name: 'Propuestas B2B', blocks: [ { id: uuidv4(), type: 'TEXT', details: { value: 'Business proposals and partnerships' } } ], pinned: true },
-  { id: uuidv4(), icon: 'lucide:satellite-dish', name: 'Plan de comunicaciones 2.0', blocks: [ { id: uuidv4(), type: 'TEXT', details: { value: 'Communications plan and updates' } } ] },
-  { id: uuidv4(), icon: 'lucide:folder', name: 'Directorios Dob Protocol', blocks: [ { id: uuidv4(), type: 'TEXT', details: { value: 'Team and protocol directories' } } ] },
-  { id: uuidv4(), icon: 'lucide:palette', name: 'UX/UI', blocks: [ { id: uuidv4(), type: 'TEXT', details: { value: 'Design and user experience docs' } } ] },
-  { id: uuidv4(), icon: 'lucide:clipboard-list', name: 'Tareas Equipo Mayo ->', blocks: [ { id: uuidv4(), type: 'TEXT', details: { value: 'May team tasks and assignments' } } ] },
-])
-
-// --- File Explorer Tree ---
-const fileTree = ref([
   {
     id: uuidv4(),
-    name: 'Gestion del Equipo',
-    type: 'folder',
-    children: pages.value.map(page => ({ id: page.id, name: page.name, type: 'file' })),
+    name: 'Project Overview',
+    icon: 'lucide:file-text',
+    blocks: [
+      { id: uuidv4(), type: 'TEXT', details: { value: 'Welcome to the project!' } },
+    ],
   },
   {
     id: uuidv4(),
-    name: 'Miscellaneous',
-    type: 'folder',
-    children: [
-      { id: uuidv4(), name: 'User Stories Fase 3', type: 'file' },
+    name: 'Team Members',
+    icon: 'lucide:users',
+    blocks: [
+      { id: uuidv4(), type: 'TEXT', details: { value: 'Meet the team.' } },
+    ],
+  },
+  {
+    id: uuidv4(),
+    name: 'Timeline',
+    icon: 'lucide:calendar',
+    blocks: [
+      { id: uuidv4(), type: 'TEXT', details: { value: 'Project timeline and milestones.' } },
+    ],
+  },
+  {
+    id: uuidv4(),
+    name: 'Settings',
+    icon: 'lucide:settings',
+    blocks: [
+      { id: uuidv4(), type: 'TEXT', details: { value: 'Project configuration and settings.' } },
+    ],
+  },
+  {
+    id: uuidv4(),
+    name: 'Discussions',
+    icon: 'lucide:message-square',
+    blocks: [
+      { id: uuidv4(), type: 'TEXT', details: { value: 'Team discussions and important conversations.' } },
     ],
   },
 ])
 
-const search = ref('')
-function filterTree(nodes: any[], searchTerm: string): any[] {
-  if (!searchTerm) return nodes
-  const term = searchTerm.toLowerCase()
-  return nodes
-    .map((node: any): any | null => {
-      if (node.type === 'folder') {
-        const filteredChildren: any[] = filterTree(node.children || [], term)
-        if (filteredChildren.length > 0 || node.name.toLowerCase().includes(term)) {
-          return { ...node, children: filteredChildren }
-        }
-        return null
-      } else {
-        return node.name.toLowerCase().includes(term) ? node : null
-      }
-    })
-    .filter(Boolean) as any[]
-}
-const filteredTree = computed(() => filterTree(fileTree.value, search.value))
-
-// --- Page Selection Logic ---
-const selectedPageId = ref<string|null>(null)
-const selectedPage = computed(() => pages.value.find(p => p.id === selectedPageId.value) || null)
-function openPage(id: string) {
-  selectedPageId.value = id
-}
-
-// --- Icon Picker ---
-const iconPickerOpen = ref<null|string>(null)
-const iconPickerTarget = ref<any>(null)
 const previewIcons = [
+  'lucide:file-text', 'lucide:users', 'lucide:calendar', 'lucide:settings', 'lucide:message-square',
   'lucide:party-popper', 'lucide:database', 'lucide:handshake', 'lucide:satellite-dish', 'lucide:folder', 'lucide:palette', 'lucide:clipboard-list',
-  'lucide:calendar', 'lucide:users', 'lucide:book', 'lucide:check-circle', 'lucide:star', 'lucide:flag', 'lucide:mail', 'lucide:settings',
+  'lucide:book', 'lucide:check-circle', 'lucide:star', 'lucide:flag', 'lucide:mail', 'lucide:dot', 'lucide:grid', 'lucide:slash', 'lucide:minus', 'lucide:line', 'lucide:square'
 ]
-function openIconPicker(page: any) {
+
+const folders = computed(() => [
+  {
+    id: 'folder1',
+    title: 'Dob Team',
+    type: 'folder',
+    children: pages.value,
+  }
+])
+
+const sidebarOpen = ref(true)
+const search = ref('')
+const selectedPage = ref<{ id: string; name: string; icon?: string; blocks: any[] } | null>(null)
+const isModalOpen = ref(false)
+const iconPickerOpen = ref(null)
+const iconPickerTarget = ref<{ id: string; name: string; icon?: string; blocks: any[] } | null>(null)
+
+function openPage(page: { id: string; name: string; icon?: string; blocks: any[] }) {
+  selectedPage.value = page
+  isModalOpen.value = true
+}
+function closeCardModal() {
+  isModalOpen.value = false
+  selectedPage.value = null
+}
+function addPage() {
+  const newPage = {
+    id: uuidv4(),
+    name: 'Untitled',
+    icon: 'lucide:file-text',
+    blocks: [
+      { id: uuidv4(), type: 'TEXT', details: { value: 'New page.' } },
+    ],
+  }
+  pages.value.unshift(newPage)
+  openPage(newPage)
+}
+function openIconPicker(page: { id: string; name: string; icon?: string; blocks: any[] }) {
   iconPickerOpen.value = page.id
   iconPickerTarget.value = page
 }
-function selectIcon(page: any, icon: string) {
-  if (page) {
-    page.icon = icon
-  }
+function selectIcon(page: { id: string; name: string; icon?: string; blocks: any[] }, icon: string) {
+  if (page) page.icon = icon
   iconPickerOpen.value = null
   iconPickerTarget.value = null
 }
-
-const sidebarOpen = ref(true)
+function addBlockToPage(page: { id: string; name: string; icon?: string; blocks: any[] }) {
+  page.blocks.push({ id: uuidv4(), type: 'TEXT', details: { value: 'New block.' } })
+}
+import { VueDraggableNext as draggable } from 'vue-draggable-next'
+function onGridDragEnd(e: any) {}
 
 const router = useRouter()
 const { address, disconnect } = useWalletConnect()
@@ -192,42 +288,6 @@ const shortAddress = computed(() => {
 async function handleDisconnect() {
   await disconnect()
   router.push('/')
-}
-
-// Mockup data for cards
-const mockupCards = [
-  { id: '1', icon: 'lucide:users', name: 'My Team', description: '👥 Team\nJasper\nMegan\nCharles', pinned: true },
-  { id: '2', icon: 'lucide:party-popper', name: 'Fechas Limites Grants', description: 'Deadlines and grant info', pinned: true },
-  { id: '3', icon: 'lucide:database', name: 'BBDD reuniones estrategicas', description: 'Strategic meetings database', pinned: true },
-  { id: '4', icon: 'lucide:handshake', name: 'Propuestas B2B', description: 'Business proposals and partnerships', pinned: true },
-  { id: '5', icon: 'lucide:satellite-dish', name: 'Plan de comunicaciones 2.0', description: 'Communications plan and updates' },
-  { id: '6', icon: 'lucide:folder', name: 'Directorios Dob Protocol', description: 'Team and protocol directories' },
-  { id: '7', icon: 'lucide:palette', name: 'UX/UI', description: 'Design and user experience docs' },
-  { id: '8', icon: 'lucide:clipboard-list', name: 'Tareas Equipo Mayo ->', description: 'May team tasks and assignments' },
-]
-
-// For the sidebar, dynamically group mockupCards into folders
-const sidebarFolders = [
-  {
-    id: 'folder1',
-    name: 'Gestion del Equipo',
-    type: 'folder',
-    children: mockupCards.slice(0, 4),
-  },
-  {
-    id: 'folder2',
-    name: 'Miscellaneous',
-    type: 'folder',
-    children: mockupCards.slice(4),
-  },
-]
-const openFolders = ref(new Set(['folder1']))
-function toggleFolder(id: string) {
-  if (openFolders.value.has(id)) openFolders.value.delete(id)
-  else openFolders.value.add(id)
-}
-function isOpen(id: string) {
-  return openFolders.value.has(id)
 }
 
 const loading = ref(true)
@@ -241,7 +301,7 @@ const patternOptions = [
   { label: 'Vertical Lines', value: 'vertical-lines', icon: 'lucide:line' },
   { label: 'Checkerboard', value: 'checkerboard', icon: 'lucide:square' },
 ]
-const optionsPopoverOpen = vueRef<string|null>(null)
+const optionsPopoverOpen = ref<string|null>(null)
 function openOptionsPopover(cardId: string) {
   optionsPopoverOpen.value = cardId
 }
@@ -250,11 +310,102 @@ function selectPattern(card: any, pattern: string) {
   optionsPopoverOpen.value = null
 }
 
+function onFolderDrop(dropResult: DropResult, folderId: string) {
+  const { removedIndex, addedIndex } = dropResult
+  if (removedIndex === null && addedIndex === null) return
+
+  const folder = folders.value.find(f => f.id === folderId)
+  if (!folder) return
+
+  const result = [...folder.children]
+  let itemToAdd = removedIndex !== null ? result.splice(removedIndex, 1)[0] : null
+
+  if (addedIndex !== null && itemToAdd) {
+    result.splice(addedIndex, 0, itemToAdd)
+    folder.children = result
+  }
+}
+
+const openFolders = ref(new Set(['folder1']))
+
+function toggleFolder(id: string) {
+  if (openFolders.value.has(id)) {
+    openFolders.value.delete(id)
+  } else {
+    openFolders.value.add(id)
+  }
+}
+
+function isOpen(id: string) {
+  return openFolders.value.has(id)
+}
+
 defineExpose({ sidebarOpen })
+
+document.addEventListener('keydown', (event:KeyboardEvent) => {
+  if (event.key === 'Tab') {
+    event.preventDefault();
+    if (selectedPage.value) {
+      addBlockToPage(selectedPage.value);
+    }
+  }
+});
 </script>
 
 <style scoped>
-input, textarea {
-  transition: background 0.2s;
+.card {
+  @apply relative border border-blue-200 shadow-md transition-transform duration-300;
+  width: 240px;
+  height: 180px;
+  min-width: 240px;
+  min-height: 180px;
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+.card::before {
+  content: '';
+  @apply absolute inset-0 rounded-lg opacity-0;
+  background: radial-gradient(circle at center, rgba(59, 130, 246, 0.05) 0%, transparent 70%);
+  transition: opacity 0.2s;
+}
+
+.card:hover::before {
+  @apply opacity-100;
+}
+
+.dragging {
+  @apply opacity-80 shadow-2xl z-50;
+  transform: scale(0.95) rotate(2deg);
+}
+
+.dropping {
+  @apply bg-blue-500 border-blue-500;
+  background-color: rgba(59, 130, 246, 0.1);
+}
+
+.flex {
+  @apply transition-all duration-300;
+}
+
+@media (max-width: 640px) {
+  .p-6 {
+    @apply p-4;
+  }
+  .card {
+    width: 100%;
+    min-width: 0;
+    height: 140px;
+    min-height: 140px;
+  }
+}
+
+.drag-handle {
+  @apply p-1 rounded-md hover:bg-blue-100 transition-colors;
+}
+
+.drag-handle:hover {
+  @apply bg-blue-100;
 }
 </style> 

@@ -24,6 +24,7 @@
     "build-bundle": "tsc && vite build --mode library && npx tailwind -c ./tailwind.config.cjs -i ./src/index.css -o lib/style.css"
   },
   "dependencies": {
+    "@dashibase/lotion": "^0.1.4",
     "@iconify/vue": "^5.0.0",
     "@mdi/font": "^7.4.47",
     "@tiptap/extension-link": "^2.0.0-beta.195",
@@ -32,13 +33,15 @@
     "@tiptap/vue-3": "^2.0.0-beta.96",
     "floating-vue": "^5.2.2",
     "fuse.js": "^6.6.2",
+    "lucide-vue-next": "^0.514.0",
     "oh-vue-icons": "^1.0.0-rc3",
     "pinia": "^3.0.3",
     "uuid": "^8.3.2",
     "vue": "^3.2.37",
-    "vue-draggable-next": "^2.1.1",
+    "vue-draggable-next": "^2.2.1",
     "vue-router": "^4.5.1",
-    "vue3-skeleton-loader": "^0.2.0"
+    "vue3-skeleton-loader": "^0.2.0",
+    "vue3-smooth-dnd": "^0.0.6"
   },
   "devDependencies": {
     "@babel/types": "^7.18.9",

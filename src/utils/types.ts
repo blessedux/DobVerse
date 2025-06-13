@@ -2,6 +2,8 @@ import TextBlock from '@/components/blocks/TextBlock.vue'
 import DividerBlock from '@/components/blocks/DividerBlock.vue'
 import HeadingBlock from '@/components/blocks/HeadingBlock.vue'
 import QuoteBlock from '@/components/blocks/QuoteBlock.vue'
+import BulletBlock from '@/components/blocks/BulletBlock.vue'
+import ToggleBlock from '@/components/blocks/ToggleBlock.vue'
 
 
 export interface Block {
@@ -16,7 +18,9 @@ export enum BlockType {
   H2 = 'H2',
   H3 = 'H3',
   Divider = 'DIVIDER',
-  Quote = 'QUOTE'
+  Quote = 'QUOTE',
+  Bullet = 'BULLET',
+  Toggle = 'TOGGLE'
 }
 
 export interface Details {
@@ -31,6 +35,8 @@ export const BlockComponents = {
   [BlockType.H3]: HeadingBlock,
   [BlockType.Divider]: DividerBlock,
   [BlockType.Quote]: QuoteBlock,
+  [BlockType.Bullet]: BulletBlock,
+  [BlockType.Toggle]: ToggleBlock,
 }
 
 export const textBlockMap = [BlockType.Text, BlockType.Quote]
@@ -75,6 +81,18 @@ export const availableBlockTypes = [
     icon: 'bi-quote',
     label: 'Quote',
     blockType: BlockType.Quote,
+    canSplit: true,
+  }, {
+    type: 'Turn into',
+    icon: 'bi-list-ul',
+    label: 'Bullet List',
+    blockType: BlockType.Bullet,
+    canSplit: true,
+  }, {
+    type: 'Turn into',
+    icon: 'bi-chevron-down',
+    label: 'Toggle List',
+    blockType: BlockType.Toggle,
     canSplit: true,
   },
 ] as { type:string, icon:string, label:string, blockType:BlockType|string, canSplit:boolean }[]
